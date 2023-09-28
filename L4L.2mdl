@@ -1,0 +1,522 @@
+{UTF-8}
+reg slip loss[Landuse]=
+	SLIPLOSS[Landuse]/INISURVEYLAND[Landuse]*REGLAND[Landuse]
+	~	ha
+	~		|
+
+tot reg loss indirect[Landuse]=
+	SMOOTH3( tot reg loss[Landuse]*LoS Land[Landuse], 1)
+	~	ha
+	~		|
+
+all reg loss=
+	SUM(tot reg loss indirect[Landuse!])
+	~	ha
+	~		|
+
+ha price[Landuse]=
+	1
+	~	$M
+	~		|
+
+reg flood loss[Landuse]=
+	FLOODLOSS[Landuse]/INISURVEYLAND[Landuse]*REGLAND[Landuse]
+	~	ha
+	~		|
+
+reg gravel loss[Landuse]=
+	GRAVELLOSS[Landuse]/INISURVEYLAND[Landuse]*REGLAND[Landuse]
+	~	ha
+	~		|
+
+reg debris loss[Landuse]=
+	DEBRISLOSS[Landuse]/INISURVEYLAND[Landuse]*REGLAND[Landuse]
+	~	ha
+	~		|
+
+reg silt loss[Landuse]=
+	SILTLOSS[Landuse]/INISURVEYLAND[Landuse]*REGLAND[Landuse]
+	~	ha
+	~		|
+
+tot reg loss[Landuse]=
+	reg debris loss[Landuse]+reg flood loss[Landuse]+reg gravel loss[Landuse]+reg silt loss\
+		[Landuse]+reg slip loss[Landuse]
+	~	ha
+	~		|
+
+REGLAND[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'INITOTLAND' , '13' , 'B14' )
+	~	ha
+	~		|
+
+survey share[Landuse]=
+	INISURVEYLAND[Landuse]/REGLAND[Landuse]
+	~	pcnt
+	~		|
+
+RGDP shock[Industries,SRegions]=
+	RGDP[Industries,SRegions]-industry shock[Industries,SRegions]
+	~	
+	~		|
+
+Reinstatement[Industries,SRegions]= INTEG (
+	REINSTATEMENTINI[Industries,SRegions]-Reinstatement[Industries,SRegions],
+		REINSTATEMENTINI[Industries,SRegions])
+	~	$M
+	~		|
+
+industry shock[Industries,SReg1]=
+	SMOOTH3( (SHOCKLOSS IND[Industries,SReg1]*SHOCKINITIATION IND[Industries,SReg1]), 0.05\
+		) ~~|
+industry shock[Industries,SReg2]=
+	RGDP[Industries,SReg2]
+	~	
+	~		|
+
+change rt[Landuse]=
+	-DEBRISLOSS[Landuse]-FLOODLOSS[Landuse]-GRAVELLOSS[Landuse]-SILTLOSS[Landuse]-SLIPLOSS\
+		[Landuse]
+	~	ha/yr
+	~		|
+
+RGDP renew[Industries,SRegions]=
+	RGDP shock[Industries,SRegions]-Reinstatement[Industries,SRegions]
+	~	
+	~		|
+
+LoS use adjusted[Landuse]=
+	SMOOTH3( LoS Land[Landuse]*lag[Landuse], 2)
+	~	
+	~		|
+
+REINSTATEMENTINI[Industries,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'REINSTATEMENTINI' , '1' , 'B2' ) ~~|
+REINSTATEMENTINI[Industries,SReg2]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'REINSTATEMENTINI' , '1' , 'B50' )
+	~	
+	~		|
+
+lag[Landuse]=
+	0.8
+	~	
+	~		|
+
+LoS Land[Landuse]=
+	Survey Land[Landuse]/INISURVEYLAND[Landuse]
+	~	ha/yr
+	~		|
+
+Survey Land[Landuse]= INTEG (
+	INISURVEYLAND[Landuse]+change rt[Landuse]-Survey Land[Landuse],
+		INISURVEYLAND[Landuse])
+	~	ha
+	~		|
+
+SILTLOSS[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_LAND' , '14' , 'B15' )
+	~	
+	~		|
+
+INISURVEYLAND[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'INITOTLAND' , '1' , 'B2' )
+	~	ha
+	~		|
+
+DEBRISLOSS[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_LAND' , '53' , 'B54' )
+	~	
+	~		|
+
+GRAVELLOSS[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_LAND' , '27' , 'B28' )
+	~	
+	~		|
+
+SLIPLOSS[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_LAND' , '1' , 'B2' )
+	~	
+	~		|
+
+FLOODLOSS[Landuse]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_LAND' , '40' , 'B41' )
+	~	
+	~		|
+
+Landuse:
+	Beef,Commercial,Dairy,Forestry,Grain,Horticulture,Lifestyle,OtherLivestock,Sheep,Viticulture
+	~	
+	~		|
+
+sector shock[Sectors,SReg1]=
+	RDP[Sectors,SReg1]-(SHOCKLOSS SEC[Sectors,SReg1]*SHOCKINITIATION SEC[Sectors,SReg1])\
+		 ~~|
+sector shock[Sectors,SReg2]=
+	RDP[Sectors,SReg2]
+	~	
+	~		|
+
+RDP[Sectors,SRegions]= INTEG (
+	INIRDP[Sectors,SRegions]*precyclone forecast-RDP[Sectors,SRegions],
+		INIRDP[Sectors,SRegions])
+	~	
+	~		|
+
+reg share employee[Industries,SReg1]=
+	SMOOTH3( EMPLOYEECOUNT[Industries,SReg1]/EMPLOYEECOUNT[Industries,SReg2], 2) ~~|
+reg share employee[Industries,SReg2]=
+	EMPLOYEECOUNT[Industries,SReg2]/EMPLOYEECOUNT[Industries,SReg2]
+	~	
+	~		|
+
+reg share GDP[Industries,SReg1]=
+	INIGDP[Industries,SReg2]*(reg share employee[Industries,SReg2]) ~~|
+reg share GDP[Industries,SReg2]=
+	INIGDP[Industries,SReg2]*(1-reg share employee[Industries,SReg2])
+	~	
+	~		|
+
+RGDP[Industries,SReg1]= INTEG (
+	reg share GDP[Industries,SReg1]*precyclone forecast-RGDP[Industries,SReg1],
+		reg share GDP[Industries,SReg1]) ~~|
+RGDP[Industries,SReg2]= INTEG (
+	reg share GDP[Industries,SReg2]*precyclone forecast-RGDP[Industries,SReg2],
+		reg share GDP[Industries,SReg2])
+	~	$M
+	~		|
+
+ind share employee[Industries,SReg1]=
+	SMOOTH3( EMPLOYEECOUNT[Industries,SReg1]/SUM(EMPLOYEECOUNT[Industries!,SReg1]), 2) ~~|
+ind share employee[Industries,SReg2]=
+	EMPLOYEECOUNT[Industries,SReg2]/SUM(EMPLOYEECOUNT[Industries!,SReg2])
+	~	
+	~		|
+
+SHOCKLOSS IND[Industries,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_IND' , '1' , 'B2' ) ~~|
+SHOCKLOSS IND[Industries,SReg2]:=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_IND' , '1' , 'B50' )
+	~	
+	~		|
+
+SHOCKINITIATION IND[Industries,SReg1]:=
+	GET XLS DATA('?scenariodata', 'SHOCKINITIATION_IND' , '1' , 'B2' ) ~~|
+SHOCKINITIATION IND[Industries,SReg2]:=
+	GET XLS DATA('?scenariodata', 'SHOCKINITIATION_IND' , '1' , 'B50' )
+	~	
+	~		|
+
+SHOCKLOSS SEC[Sectors,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_SEC' , '1' , 'B2' ) ~~|
+SHOCKLOSS SEC[Sectors,SReg2]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKLOSS_SEC' , '1' , 'B23' )
+	~	
+	~		|
+
+Active participation=
+	WORKINGAGEPOP*PARTICIPATIONRT
+	~	
+	~		|
+
+annual return rate=
+	1.1
+	~	
+	~		|
+
+SHOCKINITIATION SEC[Sectors,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKINITIATION_SEC' , '1' , 'B2' ) ~~|
+SHOCKINITIATION SEC[Sectors,SReg2]:INTERPOLATE::=
+	GET XLS DATA('?scenariodata', 'SHOCKINITIATION_SEC' , '1' , 'B23' )
+	~	
+	~		|
+
+precyclone forecast=
+	DELAY FIXED( annual return rate, 23, 1 )
+	~	
+	~		|
+
+Area:
+	AREA1,AREA2,AREA3,AREA4,AREA5,AREA6,AREA7,AREA8,AREA9,AREA10,AREA11,AREA12,AREA13,AREA14\
+		,AREA15,AREA16,AREA17,AREA18,AREA19,AREA20,AREA21,AREA22,AREA23,AREA24,AREA25,AREA26\
+		,AREA27,AREA28,AREA29,AREA30,AREA31,AREA32,AREA33,AREA34,AREA35,AREA36,AREA37,AREA38\
+		,AREA39,AREA40,AREA41,AREA42,AREA43,AREA44,AREA45,AREA46,AREA47,AREA48,AREA49,AREA50\
+		,AREA51,AREA52,AREA53,AREA54,AREA55,AREA56,AREA57,AREA58,AREA59,AREA60,AREA61,AREA62\
+		,AREA63,AREA64,AREA65,AREA66,AREA67,AREA68,AREA69,AREA70,AREA71,AREA72,AREA73,AREA74\
+		,AREA75,AREA76,AREA77,AREA78,AREA79,AREA80,AREA81,AREA82,AREA83,AREA84,AREA85,AREA86\
+		,AREA87,AREA88,AREA89,AREA90
+	~	
+	~		|
+
+EMPLOYEECOUNT[Industries,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'EMPLOYEECOUNT' , '1' , 'B2' ) ~~|
+EMPLOYEECOUNT[Industries,SReg2]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'EMPLOYEECOUNT' , '1' , 'B50' )
+	~	n
+	~		~	:SUPPLEMENTARY 
+	|
+
+DRegions:
+	DReg1,DReg2
+	~	
+	~		|
+
+SRegions:
+	SReg1,SReg2
+	~	
+	~		|
+
+INIGDP[Industries,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'INIGDP' , '1' , 'B2' ) ~~|
+INIGDP[Industries,SReg2]:=
+	GET XLS DATA('?basedata', 'INIGDP' , '1' , 'B50' )
+	~	$M
+	~		~	:SUPPLEMENTARY 
+	|
+
+Sectors:
+	SEC1,SEC2,SEC3,SEC4,SEC5,SEC6,SEC7,SEC8,SEC9,SEC10,SEC11,SEC12,SEC13,SEC14,SEC15,SEC16\
+		,SEC17,SEC18,SEC19,SEC20
+	~	
+	~		|
+
+INIWAGERT=
+	1
+	~	
+	~		|
+
+Industries:
+	IND01,IND02,IND03,IND04,IND05,IND06,IND07,IND08,IND09,IND10,IND11,IND12,IND13,IND14,\
+		IND15,IND16,IND17,IND18,IND19,IND20,IND21,IND22,IND23,IND24,IND25,IND26,IND27,IND28\
+		,IND29,IND30,IND31,IND32,IND33,IND34,IND35,IND36,IND37,IND38,IND39,IND40,IND41,IND42\
+		,IND43,IND44,IND45,IND46
+	~	
+	~		|
+
+INIRDP[Sectors,SReg1]:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'INIRDP' , '1' , 'B2' ) ~~|
+INIRDP[Sectors,SReg2]:=
+	GET XLS DATA('?basedata', 'INIRDP' , '1' , 'B23' )
+	~	$M
+	~		|
+
+WORKINGAGEPOP:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'WORKINGAGEPOP' , '1' , 'B2' )
+	~	
+	~		|
+
+PARTICIPATIONRT:=
+	GET XLS DATA('?basedata', 'PARTICIPATIONRT' , '1' , 'B2' )
+	~	
+	~		|
+
+POPULATION:INTERPOLATE::=
+	GET XLS DATA('?basedata', 'POPULATION' , '1' , 'B2' )
+	~	
+	~		|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 30
+	~	Year
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	Year
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 
+        TIME STEP
+	~	Year [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 0.005
+	~	Year [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Industries
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,100,0
+10,1,POPULATION,175,112,51,11,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,2,WORKINGAGEPOP,164,151,87,19,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,3,PARTICIPATIONRT,180,190,86,22,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,4,INIRDP,138,531,28,11,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,5,INIWAGERT,171,229,46,11,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,6,INIGDP,166,394,29,11,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,7,EMPLOYEECOUNT,176,282,89,14,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,8,Active participation,452,179,44,19,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,9,2,8,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,10,3,8,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,11,SHOCKINITIATION SEC,848,671,76,25,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,12,precyclone forecast,688,452,37,19,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,13,RDP,691,525,20,10,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,14,4,13,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,15,annual return rate,510,450,54,11,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,16,15,12,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,17,12,13,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,18,sector shock,857,525,56,11,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,19,13,18,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,20,SHOCKINITIATION IND,806,166,70,19,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,21,SHOCKLOSS SEC,773,599,46,20,8,131,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,22,11,18,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,23,21,18,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,24,ind share employee,407,252,32,19,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,25,7,24,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,26,reg share employee,409,319,31,19,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,27,7,26,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,28,RGDP,691,363,23,11,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,29,12,28,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,30,reg share GDP,520,370,47,11,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,31,6,30,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,32,26,30,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,33,30,28,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,34,industry shock,780,247,49,11,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,35,SHOCKLOSS IND,643,178,47,19,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,36,20,34,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,37,35,34,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,38,RGDP shock,866,363,52,22,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,39,28,38,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,40,34,38,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,41,28,34,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,42,REINSTATEMENTINI,1026,167,94,19,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||I|0-0-0,0,0,0,0,0,0
+10,43,Reinstatement,1027,268,54,22,3,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,44,42,43,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,45,RGDP renew,1035,366,52,22,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,46,38,45,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,47,43,45,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Landuse
+$-1--1--1,0,|12||-1--1--1|-1--1--1|128-64-0|-1--1--1|-1--1--1|96,96,100,2
+10,1,Survey Land,976,222,42,22,3,3,0,16,-1,0,0,0,0-0-0,0-0-0,||B|0-0-0,0,0,0,0,0,0
+10,2,INISURVEYLAND,974,314,47,13,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,|||0-0-0,0,0,0,0,0,0
+1,3,2,1,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,4,SLIPLOSS,671,-65,42,22,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,|||0-0-0,0,0,0,0,0,0
+10,5,SILTLOSS,665,2,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,6,GRAVELLOSS,664,69,47,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,7,FLOODLOSS,663,128,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,8,DEBRISLOSS,665,186,47,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,9,LoS Land,1164,226,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,10,1,9,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,11,2,9,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+12,12,48,742,222,10,8,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,13,15,12,100,0,0,22,0,192,0,-1--1--1,,1|(794,222)|
+1,14,15,1,4,0,0,22,0,192,0,-1--1--1,,1|(891,222)|
+11,15,0,843,222,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,16,change rt,843,252,42,22,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,17,4,15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,18,5,15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,19,6,15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,20,7,15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,21,8,15,1,0,0,0,0,192,0,-1--1--1,,1|(778,197)|
+10,22,lag,1331,145,42,12,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,23,LoS use adjusted,1346,226,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,24,9,23,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,25,22,23,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,26,REGLAND,204,338,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,27,survey share,973,474,75,30,0,3,0,10,-1,0,0,0,-1--1--1,-1--1--1,|10|I|0-0-0,0,0,0,0,0,0
+1,28,2,27,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,29,26,27,1,0,0,0,0,192,0,-1--1--1,,1|(491,732)|
+10,30,reg slip loss,394,233,60,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,31,4,30,1,0,0,0,0,192,0,-1--1--1,,1|(555,96)|
+1,32,26,30,1,0,0,0,0,192,0,-1--1--1,,1|(249,270)|
+10,33,reg silt loss,378,292,60,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,34,reg gravel loss,379,373,47,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,35,reg flood loss,379,441,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,36,reg debris loss,387,526,47,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,37,26,33,1,0,0,0,0,192,0,-1--1--1,,1|(285,294)|
+1,38,26,34,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,39,26,35,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,40,26,36,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,41,5,33,1,0,0,0,0,192,0,-1--1--1,,1|(545,158)|
+1,42,6,34,1,0,0,0,0,192,0,-1--1--1,,1|(540,227)|
+1,43,7,35,1,0,0,0,0,192,0,-1--1--1,,1|(539,286)|
+1,44,8,36,1,0,0,0,0,192,0,-1--1--1,,1|(553,358)|
+1,45,2,33,1,0,0,0,0,192,0,-1--1--1,,1|(692,342)|
+1,46,2,34,1,0,0,0,0,192,0,-1--1--1,,1|(661,386)|
+1,47,2,35,1,0,0,0,0,192,0,-1--1--1,,1|(656,453)|
+1,48,2,36,1,0,0,0,0,192,0,-1--1--1,,1|(666,524)|
+10,49,tot reg loss,598,634,56,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,50,36,49,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,51,35,49,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,52,34,49,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,53,33,49,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,54,30,49,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,55,tot reg loss indirect,1053,635,56,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,56,49,55,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,57,9,55,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,58,ha price,993,757,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,59,all reg loss,1272,634,75,30,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,60,55,59,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,61,2,30,1,0,0,0,0,192,0,-1--1--1,,1|(684,307)|
+///---\\\
+:L<%^E!@
+1:Current.vdfx
+4:Time
+5:tot reg loss[Landuse]
+6:AREA1
+6:Beef
+6:Commercial
+6:Dairy
+6:DReg1
+6:Forestry
+6:Grain
+6:Horticulture
+6:IND01
+6:IND02
+6:IND03
+6:IND04
+6:IND05
+6:IND06
+6:Lifestyle
+6:OtherLivestock
+6:SEC1
+6:SEC2
+6:Sheep
+6:SReg1
+6:Viticulture
+9:Current
+19:100,1
+24:0
+25:30
+26:30
+30:?basedata=BaseData.xls
+30:?scenariodata=ScenarioData.xls
+15:0,0,0,5,0,0
+27:0,
+34:0,
+42:0
+72:0
+73:0
+35:Date
+36:YYYY-MM-DD
+37:2000
+38:1
+39:1
+40:2
+41:0
+95:0
+96:0
+97:0
+77:0
+78:0
+102:1
+93:0
+94:0
+92:0
+91:0
+90:0
+87:0
+75:
+43:
+103:8,8,8,3,8
+105:0,0,0,0,0,0,0,0,0,0
+104:Courier|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1
