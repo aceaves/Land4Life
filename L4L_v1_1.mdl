@@ -13,6 +13,29 @@ Intervention Reduction Erosion[None]= INTEG (
 	~	
 	~		|
 
+soil bulk density=
+	1.4
+	~	t
+	~	we compute sediment yields for the landslide triggering event, assuming \
+		soil bulk density is 1.4 t m􀀀 3 and an average scar depth of 1 m \
+		(Crozier, 1996). Spiekermann 2022.
+	|
+
+slip rate[PoplarPoles]=
+	SMOOTH(IF THEN ELSE(RETIRE DELAY START=0, (slip prone land*soil bulk density)-Slip Erosion\
+		[None] ,(((slip prone land*soil bulk density)-(slip prone land*soil bulk density)*
+	(Pole Reduction/100))-Slip Erosion[PoplarPoles])), 4) ~~|
+slip rate[ExoticForest]=
+	SMOOTH(IF THEN ELSE(RETIRE DELAY START=0, (slip prone land*soil bulk density)-Slip Erosion\
+		[None] ,(((slip prone land*soil bulk density)-(slip prone land*soil bulk density)*(\
+		Forest Reduction
+	/100))-Slip Erosion[ExoticForest])), 4) ~~|
+slip rate[None]=
+	SMOOTH((slip prone land*soil bulk density)-Slip Erosion[None], 4)
+	~	t/ha/yr
+	~	SMOOTH of 4 to reflect Interdecal Pacific Oscillation.
+	|
+
 marginal reduction p= DELAY FIXED (
 	 (1-Pole Reduction)*REDUCTION FACTOR P, 23, 0)
 	~	Dmnl
@@ -147,20 +170,6 @@ slip prone land=
 	~	ha
 	~		|
 
-slip rate[PoplarPoles]=
-	SMOOTH3(IF THEN ELSE(RETIRE DELAY START=0, slip prone land-Slip Erosion[None] ,((slip prone land\
-		-slip prone land*(Pole Reduction/100))-Slip Erosion[PoplarPoles])), 4) ~~|
-slip rate[ExoticForest]=
-	SMOOTH3(IF THEN ELSE(RETIRE DELAY START=0, slip prone land-Slip Erosion[None] ,((slip prone land\
-		-slip prone land*(Forest Reduction/100))-Slip Erosion[ExoticForest])), 4) ~~|
-slip rate[None]=
-	SMOOTH3(slip prone land-Slip Erosion[None], 4)
-	~	ha/yr
-	~	IF THEN ELSE(SCENARIO SWITCH=1,(((slip prone land*POLE SHARE*(-pole \
-		reduction))-Slip Erosion[PoplarPoles]))*RETIRE DELAY START, (slip prone \
-		land-Slip Erosion[None])*RETIRE DELAY START)
-	|
-
 DIVERSE FACTOR=
 	0.002
 	~	Dmnl
@@ -231,9 +240,10 @@ Tot Baseline Land= INTEG (
 	~		|
 
 slip likelihood=
-	RANDOM NORMAL( 0, 1, 0.05, 0.2, NOISE SEED)
-	~	
-	~		|
+	RANDOM WEIBULL(0, 1, 0.8, 0.15 , 0.3,NOISE SEED )
+	~	pcnt
+	~	RANDOM NORMAL( 0, 1, 0.05, 0.2, NOISE SEED)
+	|
 
 NOISE SEED=
 	GET TIME VALUE(2,0,10)
@@ -252,7 +262,7 @@ INI SLIPS=
 	|
 
 REDUCTION FACTOR P=
-	0.7
+	1.35
 	~	pcnt
 	~		|
 
@@ -262,14 +272,14 @@ FORESTRY SHARE=
 	~		|
 
 REDUCTION FACTOR F=
-	0.8
+	1.44
 	~	pcnt
 	~		|
 
 Slip Erosion[Intervention]= INTEG (
 	slip rate[Intervention]-Slip Erosion[Intervention],
 		INI SLIPS)
-	~	ha
+	~	t/ha
 	~		|
 
 Intervention:
@@ -784,11 +794,13 @@ $-1--1--1,0,|12||-1--1--1|-1--1--1|0-64-0|-1--1--1|-1--1--1|96,96,5,2
 1,154,153,89,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,155,Intervention Reduction Erosion,1982,527,56,26,3,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,156,70,155,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,157,soil bulk density,1529,633,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,158,157,72,1,0,0,0,0,192,0,-1--1--1,,1|(1566,553)|
 ///---\\\
 :L<%^E!@
 1:Current.vdfx
 4:Time
-5:mean deposition
+5:slip rate[Intervention]
 6:AREA1
 6:Beef
 6:Commercial
